@@ -49,12 +49,13 @@ fn setup (
     mut commands: Commands,
 ) {
 
-    let mut camera = Camera2dBundle::default();
-    camera.projection.scaling_mode = bevy::render::camera::ScalingMode::Fixed {
+    let mut camera_bundle = Camera2dBundle::default();
+    camera_bundle.projection.scaling_mode = bevy::render::camera::ScalingMode::Fixed {
         width: WINDOW_SIZE.x,
         height: WINDOW_SIZE.y
     };
-    commands.spawn(camera);
+    camera_bundle.camera.clear_color = ClearColorConfig::Custom(Color::rgb(32. / 255., 32. / 255., 64. / 255.));
+    commands.spawn(camera_bundle);
 }
 
 fn move_player(
