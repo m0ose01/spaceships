@@ -58,7 +58,7 @@ fn setup (
 }
 
 fn move_player(
-    mut sprite_query: Query<&mut movement_plugin::Physics, With<input_plugin::InputResponsive>>,
+    mut sprite_query: Query<&mut movement_plugin::TranslationalPhysics, With<input_plugin::InputResponsive>>,
     mut ev_reader: EventReader<input_plugin::InputEvent>,
 ) {
     for mut physics in &mut sprite_query {
@@ -87,9 +87,11 @@ mod movement_plugin {
     impl Plugin for MovementPlugin {
         fn build(&self, app: &mut App) {
             app.add_systems(Update, (
-                update_physics,
+                update_translational_physics,
                 limit_max_speed,
-                move_sprite,
+                translate_sprite,
+                rotate_sprite,
+                accelerate_sprite_rotation,
             ).chain()
             );
             app.add_systems(Update, rotate_to_mouse);
@@ -98,20 +100,19 @@ mod movement_plugin {
     }
 
     #[derive(Component)]
-    pub struct Physics {
+    pub struct TranslationalPhysics {
         pub velocity: Vec2,
         pub acceleration: Vec2,
     }
 
-    impl Physics {
+    impl TranslationalPhysics {
         pub fn update(&mut self) {
             self.velocity += self.acceleration;
             self.acceleration = Vec2::splat(0.);
         }
     }
 
-
-    impl Default for Physics {
+    impl Default for TranslationalPhysics {
         fn default() -> Self {
             Self {
                 velocity: Vec2::splat(0.),
@@ -120,17 +121,17 @@ mod movement_plugin {
         }
     }
 
-    fn update_physics(
-        mut sprite_query: Query<&mut Physics>,
+    fn update_translational_physics(
+        mut sprite_query: Query<&mut TranslationalPhysics>,
     ) {
         for mut physics in &mut sprite_query {
             physics.update();
         }
     }
 
-    fn move_sprite(
+    fn translate_sprite(
         time: Res<Time>,
-        mut sprite_query: Query<(&mut Transform, &Physics)>,
+        mut sprite_query: Query<(&mut Transform, &TranslationalPhysics)>,
     ) {
         let deltat_s = time.delta_seconds();
         for (mut transform, physics) in &mut sprite_query {
@@ -153,7 +154,7 @@ mod movement_plugin {
     }
 
     fn limit_max_speed(
-        mut sprite_query: Query<(&mut Physics, &MaxSpeed)>,
+        mut sprite_query: Query<(&mut TranslationalPhysics, &MaxSpeed)>,
     ) {
         for (mut physics, max_speed) in &mut sprite_query {
             if physics.velocity.length() > max_speed.speed {
@@ -210,6 +211,30 @@ mod movement_plugin {
                 transform.translation.y *= -1.;
             }
         }
+    }
+
+    #[derive(Component, Default)]
+    pub struct RotationalPhysics {
+        pub angular_velocity: f32,
+        pub angular_acceleration: f32,
+    }
+
+    fn rotate_sprite(
+        time: Res<Time>,
+        mut sprite_query: Query<(&mut Transform, &RotationalPhysics)>,
+    ) {
+        for (mut transform, rotational_physics) in &mut sprite_query {
+            transform.rotate_z(rotational_physics.angular_velocity * time.delta_seconds());
+        }
+    }
+
+    fn accelerate_sprite_rotation(
+        time: Res<Time>,
+        mut sprite_query: Query<&mut RotationalPhysics>,
+    ) {
+        for mut rotational_physics in &mut sprite_query {
+            rotational_physics.angular_velocity += rotational_physics.angular_acceleration * time.delta_seconds();
+        }  
     }
 }
 
@@ -341,7 +366,7 @@ mod game_objects_plugin {
     ) {
 
         let player = (
-            crate::movement_plugin::Physics::default(),
+            crate::movement_plugin::TranslationalPhysics::default(),
             crate::movement_plugin::RotateToMouse,
             crate::movement_plugin::MaxSpeed::new(crate::PLAYER_MAX_SPEED),
             crate::movement_plugin::Wrap,
@@ -369,7 +394,7 @@ mod game_objects_plugin {
 
         for _ in 0..asteroid_count {
             let asteroid = (
-                crate::movement_plugin::Physics {
+                crate::movement_plugin::TranslationalPhysics {
                     velocity: random_vector(asteroid_speed),
                     ..default()
                 },
@@ -381,6 +406,10 @@ mod game_objects_plugin {
                     ..default()
                 },
                 crate::movement_plugin::Wrap,
+                crate::movement_plugin::RotationalPhysics {
+                    angular_velocity: std::f32::consts::PI / 2.,
+                    ..default()
+                }
             );
             commands.spawn(asteroid);
         }
