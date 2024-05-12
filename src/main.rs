@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 
 const WINDOW_SIZE: Vec2 = Vec2::new(800., 400.);
-const PLAYER_ACCELERATION: f32 = 20.;
+const PLAYER_ACCELERATION: f32 = 10.;
 const PLAYER_MAX_SPEED: f32 = 300.;
+
+const PLAYER_SIZE: f32 = 4.;
 
 fn main() {
     let mut app = App::new();
@@ -40,9 +42,11 @@ fn setup (
     commands.spawn(camera);
     commands.spawn((
         movement_plugin::Physics::default(),
+        movement_plugin::RotateToMouse,
         movement_plugin::MaxSpeed::new(PLAYER_MAX_SPEED),
         SpriteBundle {
-            texture: asset_server.load("textures/spaceship.png"),
+            texture: asset_server.load("textures/Spaceship.png"),
+            transform: Transform::default().with_scale(Vec3::splat(PLAYER_SIZE)),
             ..default()
         },
         input_plugin::InputResponsive,
@@ -72,6 +76,8 @@ mod movement_plugin {
 
     use bevy::prelude::*;
 
+    use crate::mouse_tracking_plugin::MouseWorldCoords;
+
     pub struct MovementPlugin;
 
     impl Plugin for MovementPlugin {
@@ -82,6 +88,7 @@ mod movement_plugin {
                 move_sprite,
             ).chain()
             );
+            app.add_systems(Update, rotate_to_mouse);
         }
     }
 
@@ -147,6 +154,23 @@ mod movement_plugin {
             if physics.velocity.length() > max_speed.speed {
                 physics.velocity = physics.velocity.normalize() * max_speed.speed;
             }
+        }
+    }
+
+    #[derive(Component)]
+    pub struct RotateToMouse;
+
+    fn rotate_to_mouse(
+        mouse_coords: Res<MouseWorldCoords>,
+        mut sprite_query: Query<&mut Transform, With<RotateToMouse>>,
+    ) {
+        let mouse_position = mouse_coords.0;
+
+        for mut transform in &mut sprite_query {
+            let player_position = transform.translation.truncate();
+            let vector_to_mouse = mouse_position - player_position;
+            let angle_to_mouse = vector_to_mouse.y.atan2(vector_to_mouse.x);
+            transform.rotation = Quat::from_rotation_z(angle_to_mouse - std::f32::consts::PI / 2.);
         }
     }
 }
@@ -230,7 +254,7 @@ mod mouse_tracking_plugin {
     }
 
     #[derive(Resource, Default)]
-    pub struct MouseWorldCoords(Vec2);
+    pub struct MouseWorldCoords(pub Vec2);
 
     // From Bevy Unofficial Guide
     fn cursor_tracking_system(
