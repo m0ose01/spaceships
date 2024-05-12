@@ -398,7 +398,7 @@ mod game_objects_plugin {
                     texture: asset_server.load("textures/Asteroid.png"),
                     transform: Transform::from_translation(
                         random_point(world_borders.width, world_borders.height),
-                    ).with_scale(Vec2::splat(2.).extend(0.)),
+                    ).with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(0.)),
                     ..default()
                 },
                 crate::movement_plugin::Wrap,
