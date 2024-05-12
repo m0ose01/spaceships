@@ -6,13 +6,19 @@ const PLAYER_MAX_SPEED: f32 = 300.;
 
 const PLAYER_SIZE: f32 = 4.;
 
-const WORLD_WIDTH: f32 = WINDOW_SIZE.x;
-const WORLD_HEIGHT: f32 = WINDOW_SIZE.y;
-
 #[derive(Resource)]
 struct WorldBorders {
     width: f32,
     height: f32,
+}
+
+impl Default for WorldBorders {
+    fn default() -> Self {
+        WorldBorders {
+            width: WINDOW_SIZE.x,
+            height: WINDOW_SIZE.y,
+        }
+    }
 }
 
 fn main() {
@@ -35,6 +41,7 @@ fn main() {
     app.add_plugins((movement_plugin::MovementPlugin, input_plugin::InputPlugin, mouse_tracking_plugin::MouseTrackingPlugin, game_objects_plugin::GameObjectsPlugin));
     app.add_systems(Update, (bevy::window::close_on_esc, move_player));
     app.add_systems(Startup, setup);
+    app.init_resource::<WorldBorders>();
     app.run();
 }
 
@@ -48,10 +55,6 @@ fn setup (
         height: WINDOW_SIZE.y
     };
     commands.spawn(camera);
-    commands.insert_resource(WorldBorders {
-        width: WORLD_WIDTH,
-        height: WORLD_HEIGHT,
-    });
 }
 
 fn move_player(
@@ -327,11 +330,12 @@ mod game_objects_plugin {
 
     impl Plugin for GameObjectsPlugin {
         fn build(&self, app: &mut App) {
-            app.add_systems(Startup, setup);
+            app.add_systems(Startup, spawn_player);
+            app.add_systems(Startup, spawn_asteroids);
         }
     }
 
-    fn setup (
+    fn spawn_player (
         asset_server: Res<AssetServer>,
         mut commands: Commands,
     ) {
@@ -353,6 +357,12 @@ mod game_objects_plugin {
             player,
         );
 
+    }
+
+    fn spawn_asteroids(
+        asset_server: Res<AssetServer>,
+        mut commands: Commands,
+    ) {
         let asteroid_count = 5;
         let asteroid_speed = 64.;
 
