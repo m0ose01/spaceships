@@ -274,6 +274,7 @@ mod mouse_tracking_plugin {
 mod game_objects_plugin {
 
     use bevy::prelude::*;
+    use rand::Rng;
 
     pub struct GameObjectsPlugin;
 
@@ -303,5 +304,31 @@ mod game_objects_plugin {
         commands.spawn(
             player,
         );
+
+        let asteroid_count = 5;
+        let asteroid_speed = 64.;
+
+        for _ in 0..asteroid_count {
+            let asteroid = (
+                crate::movement_plugin::Physics {
+                    velocity: random_vector(asteroid_speed),
+                    ..default()
+                },
+                SpriteBundle {
+                    texture: asset_server.load("textures/Asteroid.png"),
+                    transform: Transform::default().with_scale(Vec3::splat(2.)),
+                    ..default()
+                }
+            );
+            commands.spawn(asteroid);
+        }
+    }
+
+    fn random_vector(speed: f32) -> Vec2 {
+        let mut rng = rand::thread_rng();
+
+        let rand1 = rng.gen::<f32>() - 0.5;
+        let rand2 = rng.gen::<f32>() - 0.5;
+        return Vec2::new(rand1, rand2).normalize_or_zero() * speed;
     }
 }
