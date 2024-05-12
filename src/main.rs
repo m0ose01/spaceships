@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 const WINDOW_SIZE: Vec2 = Vec2::new(800., 400.);
-const PLAYER_ACCELERATION: f32 = 10.;
+const PLAYER_ACCELERATION: f32 = 1024.;
 const PLAYER_MAX_SPEED: f32 = 300.;
 
 const PLAYER_SIZE: f32 = 4.;
@@ -87,7 +87,7 @@ mod movement_plugin {
     impl Plugin for MovementPlugin {
         fn build(&self, app: &mut App) {
             app.add_systems(Update, (
-                update_translational_physics,
+                accelerate_sprite,
                 limit_max_speed,
                 translate_sprite,
                 rotate_sprite,
@@ -105,13 +105,6 @@ mod movement_plugin {
         pub acceleration: Vec2,
     }
 
-    impl TranslationalPhysics {
-        pub fn update(&mut self) {
-            self.velocity += self.acceleration;
-            self.acceleration = Vec2::splat(0.);
-        }
-    }
-
     impl Default for TranslationalPhysics {
         fn default() -> Self {
             Self {
@@ -121,11 +114,13 @@ mod movement_plugin {
         }
     }
 
-    fn update_translational_physics(
+    fn accelerate_sprite(
+        time: Res<Time>,
         mut sprite_query: Query<&mut TranslationalPhysics>,
     ) {
         for mut physics in &mut sprite_query {
-            physics.update();
+            physics.velocity = physics.velocity + physics.acceleration * time.delta_seconds();
+            physics.acceleration = Vec2::splat(0.);
         }
     }
 
