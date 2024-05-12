@@ -6,6 +6,15 @@ const PLAYER_MAX_SPEED: f32 = 300.;
 
 const PLAYER_SIZE: f32 = 4.;
 
+const WORLD_WIDTH: f32 = WINDOW_SIZE.x;
+const WORLD_HEIGHT: f32 = WINDOW_SIZE.y;
+
+#[derive(Resource)]
+struct WorldBorders {
+    width: f32,
+    height: f32,
+}
+
 fn main() {
     let mut app = App::new();
     app.add_plugins(
@@ -39,6 +48,10 @@ fn setup (
         height: WINDOW_SIZE.y
     };
     commands.spawn(camera);
+    commands.insert_resource(WorldBorders {
+        width: WORLD_WIDTH,
+        height: WORLD_HEIGHT,
+    });
 }
 
 fn move_player(
@@ -77,6 +90,7 @@ mod movement_plugin {
             ).chain()
             );
             app.add_systems(Update, rotate_to_mouse);
+            app.add_systems(Update, wrap_sprite);
         }
     }
 
@@ -159,6 +173,39 @@ mod movement_plugin {
             let vector_to_mouse = mouse_position - player_position;
             let angle_to_mouse = vector_to_mouse.y.atan2(vector_to_mouse.x);
             transform.rotation = Quat::from_rotation_z(angle_to_mouse - std::f32::consts::PI / 2.);
+        }
+    }
+
+    #[derive(Component)]
+    pub struct Wrap;
+
+    fn wrap_sprite(
+        assets: Res<Assets<Image>>,
+        mut sprite_query: Query<(&mut Transform, Option<&Handle<Image>>), With<Wrap>>,
+        world_borders: Res<crate::WorldBorders>,
+    ) {
+        for (mut transform, handle) in &mut sprite_query {
+            let size = match handle {
+                Some(sprite_handle) => assets.get(sprite_handle).unwrap().size(),
+                _ => UVec2::splat(0),
+            };
+
+            let size_scaled = Vec2::new (
+                size.x as f32 * transform.scale.x,
+                size.y as f32 * transform.scale.y,
+            );
+
+            let limits = Vec2::new (
+                (world_borders.width + size_scaled.x) / 2.,
+                (world_borders.height + size_scaled.y) / 2.,
+            );
+
+            if transform.translation.x.abs() > limits.x {
+                transform.translation.x *= -1.;
+            }
+            if transform.translation.y.abs() > limits.y {
+                transform.translation.y *= -1.;
+            }
         }
     }
 }
@@ -293,6 +340,7 @@ mod game_objects_plugin {
             crate::movement_plugin::Physics::default(),
             crate::movement_plugin::RotateToMouse,
             crate::movement_plugin::MaxSpeed::new(crate::PLAYER_MAX_SPEED),
+            crate::movement_plugin::Wrap,
             SpriteBundle {
                 texture: asset_server.load("textures/Spaceship.png"),
                 transform: Transform::default().with_scale(Vec3::splat(crate::PLAYER_SIZE)),
@@ -318,7 +366,8 @@ mod game_objects_plugin {
                     texture: asset_server.load("textures/Asteroid.png"),
                     transform: Transform::default().with_scale(Vec3::splat(2.)),
                     ..default()
-                }
+                },
+                crate::movement_plugin::Wrap,
             );
             commands.spawn(asteroid);
         }
