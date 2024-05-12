@@ -8,15 +8,15 @@ const PLAYER_SIZE: f32 = 4.;
 
 #[derive(Resource)]
 struct WorldBorders {
-    width: f32,
-    height: f32,
+    width: u32,
+    height: u32,
 }
 
 impl Default for WorldBorders {
     fn default() -> Self {
         WorldBorders {
-            width: WINDOW_SIZE.x,
-            height: WINDOW_SIZE.y,
+            width: WINDOW_SIZE.x as u32,
+            height: WINDOW_SIZE.y as u32,
         }
     }
 }
@@ -199,8 +199,8 @@ mod movement_plugin {
             );
 
             let limits = Vec2::new (
-                (world_borders.width + size_scaled.x) / 2.,
-                (world_borders.height + size_scaled.y) / 2.,
+                (world_borders.width as f32 + size_scaled.x) / 2.,
+                (world_borders.height as f32 + size_scaled.y) / 2.,
             );
 
             if transform.translation.x.abs() > limits.x {
