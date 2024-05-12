@@ -23,14 +23,13 @@ fn main() {
             .set( ImagePlugin::default_nearest(),
             )
     );
-    app.add_plugins((movement_plugin::MovementPlugin, input_plugin::InputPlugin, mouse_tracking_plugin::MouseTrackingPlugin));
+    app.add_plugins((movement_plugin::MovementPlugin, input_plugin::InputPlugin, mouse_tracking_plugin::MouseTrackingPlugin, game_objects_plugin::GameObjectsPlugin));
     app.add_systems(Update, (bevy::window::close_on_esc, move_player));
     app.add_systems(Startup, setup);
     app.run();
 }
 
 fn setup (
-    asset_server: Res<AssetServer>,
     mut commands: Commands,
 ) {
 
@@ -40,17 +39,6 @@ fn setup (
         height: WINDOW_SIZE.y
     };
     commands.spawn(camera);
-    commands.spawn((
-        movement_plugin::Physics::default(),
-        movement_plugin::RotateToMouse,
-        movement_plugin::MaxSpeed::new(PLAYER_MAX_SPEED),
-        SpriteBundle {
-            texture: asset_server.load("textures/Spaceship.png"),
-            transform: Transform::default().with_scale(Vec3::splat(PLAYER_SIZE)),
-            ..default()
-        },
-        input_plugin::InputResponsive,
-    ));
 }
 
 fn move_player(
@@ -280,5 +268,40 @@ mod mouse_tracking_plugin {
             mouse_coords.0 = world_position;
         }
         // println!("{:?}", mycoords.0)
+    }
+}
+
+mod game_objects_plugin {
+
+    use bevy::prelude::*;
+
+    pub struct GameObjectsPlugin;
+
+    impl Plugin for GameObjectsPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_systems(Startup, setup);
+        }
+    }
+
+    fn setup (
+        asset_server: Res<AssetServer>,
+        mut commands: Commands,
+    ) {
+
+        let player = (
+            crate::movement_plugin::Physics::default(),
+            crate::movement_plugin::RotateToMouse,
+            crate::movement_plugin::MaxSpeed::new(crate::PLAYER_MAX_SPEED),
+            SpriteBundle {
+                texture: asset_server.load("textures/Spaceship.png"),
+                transform: Transform::default().with_scale(Vec3::splat(crate::PLAYER_SIZE)),
+                ..default()
+            },
+            crate::input_plugin::InputResponsive,
+        );
+
+        commands.spawn(
+            player,
+        );
     }
 }
