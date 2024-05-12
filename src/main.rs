@@ -362,6 +362,7 @@ mod game_objects_plugin {
     fn spawn_asteroids(
         asset_server: Res<AssetServer>,
         mut commands: Commands,
+        world_borders: Res<crate::WorldBorders>,
     ) {
         let asteroid_count = 5;
         let asteroid_speed = 64.;
@@ -374,7 +375,9 @@ mod game_objects_plugin {
                 },
                 SpriteBundle {
                     texture: asset_server.load("textures/Asteroid.png"),
-                    transform: Transform::default().with_scale(Vec3::splat(2.)),
+                    transform: Transform::from_translation(
+                        random_point(world_borders.width, world_borders.height),
+                    ).with_scale(Vec3::splat(2.)),
                     ..default()
                 },
                 crate::movement_plugin::Wrap,
@@ -389,5 +392,16 @@ mod game_objects_plugin {
         let rand1 = rng.gen::<f32>() - 0.5;
         let rand2 = rng.gen::<f32>() - 0.5;
         return Vec2::new(rand1, rand2).normalize_or_zero() * speed;
+    }
+
+    fn random_point(width: u32, height: u32) -> Vec3 {
+        let mut rng = rand::thread_rng();
+        let x = rng.gen_range(-(width as i32 / 2)..(width as i32 / 2)) as f32;
+        let y = rng.gen_range(-(height as i32 / 2)..(height as i32 / 2)) as f32;
+        Vec3::new(
+            x,
+            y,
+            0.,
+        )
     }
 }
