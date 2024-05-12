@@ -189,7 +189,7 @@ mod movement_plugin {
     ) {
         for (mut transform, handle) in &mut sprite_query {
             let size = match handle {
-                Some(sprite_handle) => assets.get(sprite_handle).unwrap().size(),
+                Some(sprite_handle) => assets.get(sprite_handle).expect("Could not get asset for a sprite handle.").size(),
                 _ => UVec2::splat(0),
             };
 
@@ -365,7 +365,7 @@ mod game_objects_plugin {
         world_borders: Res<crate::WorldBorders>,
     ) {
         let asteroid_count = 5;
-        let asteroid_speed = 64.;
+        let asteroid_speed = 256.;
 
         for _ in 0..asteroid_count {
             let asteroid = (
