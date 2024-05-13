@@ -186,8 +186,11 @@ mod movement_plugin {
     ) {
         for (mut transform, handle) in &mut sprite_query {
             let size = match handle {
-                Some(sprite_handle) => assets.get(sprite_handle).expect("Could not get asset for a sprite handle.").size(),
-                _ => UVec2::splat(0),
+                Some(sprite_handle) => match assets.get(sprite_handle) {
+                    Some(vec) => vec.size(),
+                    None => UVec2::splat(0),
+                },
+                None => UVec2::splat(0),
             };
 
             let size_scaled = Vec2::new (
