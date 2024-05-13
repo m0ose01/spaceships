@@ -467,7 +467,7 @@ mod game_objects_plugin {
             crate::movement_plugin::Wrap,
             crate::movement_plugin::CollisionPhysics::default(),
             SpriteBundle {
-                texture: asset_server.load("textures/Spaceship.png"),
+                texture: asset_server.load("textures/Spaceship3.png"),
                 transform: Transform::default().with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(0.)),
                 ..default()
             },
