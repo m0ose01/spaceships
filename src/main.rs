@@ -79,7 +79,11 @@ fn move_player(
 
 mod movement_plugin {
 
-    use bevy::prelude::*;
+    use bevy::{
+        prelude::*,
+        math::bounding,
+        math::bounding::IntersectsVolume,
+    };
 
     use crate::mouse_tracking_plugin::MouseWorldCoords;
 
@@ -87,6 +91,7 @@ mod movement_plugin {
 
     impl Plugin for MovementPlugin {
         fn build(&self, app: &mut App) {
+            app.add_event::<CollisionEvent>();
             app.add_systems(Update, (
                 accelerate_sprite,
                 limit_max_speed,
@@ -97,6 +102,9 @@ mod movement_plugin {
             );
             app.add_systems(Update, rotate_to_mouse);
             app.add_systems(Update, wrap_sprite);
+            app.add_systems(Update, calculate_hitbox);
+            app.add_systems(Update, check_collisions);
+            app.add_systems(Update, collide);
         }
     }
 
@@ -235,6 +243,84 @@ mod movement_plugin {
             rotational_physics.angular_velocity += rotational_physics.angular_acceleration * time.delta_seconds();
         }  
     }
+
+    #[derive(Component)]
+    pub struct CollisionPhysics {
+        hitbox: bounding::Aabb2d,
+    }
+
+    impl Default for CollisionPhysics {
+        fn default() -> Self {
+            CollisionPhysics {
+                hitbox: bounding::Aabb2d::new(
+                    Vec2::splat(0.),
+                    Vec2::splat(0.),
+                ),
+            }
+        }
+    }
+
+    fn calculate_hitbox(
+        assets: Res<Assets<Image>>,
+        mut sprite_query: Query<(&mut CollisionPhysics, &Transform, &Handle<Image>)>,
+    ) {
+        for (mut collision_physics, transform, sprite_handle) in &mut sprite_query {
+            let size = match assets.get(sprite_handle) {
+                Some(vec) => vec.size_f32(),
+                None => Vec2::splat(0.),
+            };
+
+            let hitbox_shrinking_factor = 0.8;
+
+            let size_scaled = Vec2::new (
+                size.x * transform.scale.x * hitbox_shrinking_factor,
+                size.y * transform.scale.y * hitbox_shrinking_factor,
+            );
+
+            let points = [size_scaled / 2., -size_scaled / 2.];
+            let angle = transform.rotation.angle_between(Quat::from_axis_angle(Vec3::Z, 0.));
+
+            let bounding_box = bounding::Aabb2d::from_point_cloud(
+                transform.translation.truncate(),
+                angle,
+                &points,
+            );
+
+            collision_physics.hitbox = bounding_box;
+        }
+    }
+
+    #[derive(Event)]
+    struct CollisionEvent {
+        entity_1: Entity,
+        entity_2: Entity,
+    }
+
+    fn check_collisions(
+        mut event_writer: EventWriter<CollisionEvent>,
+        sprite_query: Query<(&CollisionPhysics, Entity)>,
+    ) {
+        let mut combinations = sprite_query.iter_combinations();
+        while let Some([(collision_physics_1, entity_1), (collision_physics_2, entity_2)]) = combinations.fetch_next() {
+            if collision_physics_1.hitbox.intersects(&collision_physics_2.hitbox) {
+                event_writer.send(CollisionEvent {
+                    entity_1,
+                    entity_2,
+                });
+            }
+        }
+    }
+
+    fn collide(
+        mut sprite_query: Query<&mut TranslationalPhysics, With<CollisionPhysics>>,
+        mut event_reader: EventReader<CollisionEvent>,
+    ) {
+        for collision_event in event_reader.read() {
+            if let Ok(mut translational_physics) = sprite_query.get_many_mut([collision_event.entity_1, collision_event.entity_2]) {
+                println!("Collision!");
+            }
+        }
+    }
 }
 
 mod input_plugin {
@@ -369,6 +455,7 @@ mod game_objects_plugin {
             crate::movement_plugin::RotateToMouse,
             crate::movement_plugin::MaxSpeed::new(crate::PLAYER_MAX_SPEED),
             crate::movement_plugin::Wrap,
+            crate::movement_plugin::CollisionPhysics::default(),
             SpriteBundle {
                 texture: asset_server.load("textures/Spaceship.png"),
                 transform: Transform::default().with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(0.)),
@@ -398,7 +485,7 @@ mod game_objects_plugin {
                     ..default()
                 },
                 SpriteBundle {
-                    texture: asset_server.load("textures/Asteroid.png"),
+                    texture: asset_server.load("textures/Asteroid2.png"),
                     transform: Transform::from_translation(
                         random_point(world_borders.width, world_borders.height),
                     ).with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(0.)),
@@ -408,7 +495,8 @@ mod game_objects_plugin {
                 crate::movement_plugin::RotationalPhysics {
                     angular_velocity: std::f32::consts::PI / 2.,
                     ..default()
-                }
+                },
+                crate::movement_plugin::CollisionPhysics::default(),
             );
             commands.spawn(asteroid);
         }
