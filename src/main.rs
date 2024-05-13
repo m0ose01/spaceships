@@ -247,15 +247,15 @@ mod movement_plugin {
 
     #[derive(Component)]
     pub struct CollisionPhysics {
-        hitbox: bounding::Aabb2d,
+        hitbox: bounding::BoundingCircle,
     }
 
     impl Default for CollisionPhysics {
         fn default() -> Self {
             CollisionPhysics {
-                hitbox: bounding::Aabb2d::new(
+                hitbox: bounding::BoundingCircle::new(
                     Vec2::splat(0.),
-                    Vec2::splat(0.),
+                    0.,
                 ),
             }
         }
@@ -271,23 +271,18 @@ mod movement_plugin {
                 None => Vec2::splat(0.),
             };
 
-            let hitbox_shrinking_factor = 0.8;
+            let hitbox_shrinking_factor = 0.9;
 
             let size_scaled = Vec2::new (
                 size.x * transform.scale.x * hitbox_shrinking_factor,
                 size.y * transform.scale.y * hitbox_shrinking_factor,
             );
 
-            let points = [size_scaled / 2., -size_scaled / 2.];
-            let angle = transform.rotation.angle_between(Quat::from_axis_angle(Vec3::Z, 0.));
-
-            let bounding_box = bounding::Aabb2d::from_point_cloud(
+            let bounding_circle = bounding::BoundingCircle::new(
                 transform.translation.truncate(),
-                angle,
-                &points,
+                (size_scaled.x + size_scaled.y) / 4.,
             );
-
-            collision_physics.hitbox = bounding_box;
+            collision_physics.hitbox = bounding_circle;
         }
     }
 
@@ -319,13 +314,7 @@ mod movement_plugin {
         for collision_event in event_reader.read() {
             if let Ok(mut query) = sprite_query.get_many_mut([collision_event.entity_1, collision_event.entity_2]) {
                 let velocity_a = query[0].0.velocity;
-                let position_a = query[0].1.translation;
                 let velocity_b = query[1].0.velocity;
-                let position_b = query[1].1.translation;
-
-                let step_back_multiplier = 0.08;
-                query[0].1.translation = position_a - velocity_a.extend(0.) * step_back_multiplier;
-                query[1].1.translation = position_b - velocity_b.normalize_or_zero().extend(0.);
                 query[0].0.velocity = velocity_b;
                 query[1].0.velocity = velocity_a;
             }
