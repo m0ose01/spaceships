@@ -312,12 +312,21 @@ mod movement_plugin {
     }
 
     fn collide(
-        mut sprite_query: Query<&mut TranslationalPhysics, With<CollisionPhysics>>,
+        mut sprite_query: Query<(&mut TranslationalPhysics, &mut Transform), With<CollisionPhysics>>,
         mut event_reader: EventReader<CollisionEvent>,
     ) {
         for collision_event in event_reader.read() {
-            if let Ok(mut translational_physics) = sprite_query.get_many_mut([collision_event.entity_1, collision_event.entity_2]) {
-                println!("Collision!");
+            if let Ok(mut query) = sprite_query.get_many_mut([collision_event.entity_1, collision_event.entity_2]) {
+                let velocity_a = query[0].0.velocity;
+                let position_a = query[0].1.translation;
+                let velocity_b = query[1].0.velocity;
+                let position_b = query[1].1.translation;
+
+                let step_back_multiplier = 0.08;
+                query[0].1.translation = position_a - velocity_a.extend(0.) * step_back_multiplier;
+                query[1].1.translation = position_b - velocity_b.normalize_or_zero().extend(0.);
+                query[0].0.velocity = velocity_b;
+                query[1].0.velocity = velocity_a;
             }
         }
     }
