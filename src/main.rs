@@ -92,19 +92,20 @@ mod movement_plugin {
     impl Plugin for MovementPlugin {
         fn build(&self, app: &mut App) {
             app.add_event::<CollisionEvent>();
-            app.add_systems(Update, (
+            app.add_systems(FixedUpdate,
+                (
+                accelerate_sprite_rotation,
+                rotate_to_mouse,
+                rotate_sprite,
+                wrap_sprite,
+                calculate_hitbox,
+                check_collisions,
+                collide,
                 accelerate_sprite,
                 limit_max_speed,
                 translate_sprite,
-                rotate_sprite,
-                accelerate_sprite_rotation,
-            ).chain()
+                ).chain()
             );
-            app.add_systems(Update, rotate_to_mouse);
-            app.add_systems(Update, wrap_sprite);
-            app.add_systems(Update, calculate_hitbox);
-            app.add_systems(Update, check_collisions);
-            app.add_systems(Update, collide);
         }
     }
 
