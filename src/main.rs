@@ -377,10 +377,10 @@ mod input_plugin {
         let primary_action_keys = [MouseButton::Left];
         let secondary_action_keys = [MouseButton::Right];
 
-        if mouse.any_pressed(primary_action_keys) {
+        if mouse.any_just_pressed(primary_action_keys) {
             ev_writer.send(InputEvent::PrimaryAction);
         }
-        if mouse.any_pressed(secondary_action_keys) {
+        if mouse.any_just_pressed(secondary_action_keys) {
             ev_writer.send(InputEvent::SecondaryAction);
         }
     }
@@ -443,6 +443,7 @@ mod game_objects_plugin {
         fn build(&self, app: &mut App) {
             app.add_systems(Startup, spawn_player);
             app.add_systems(Startup, spawn_asteroids);
+            app.add_systems(Update, shoot_bullet);
         }
     }
 
@@ -476,7 +477,7 @@ mod game_objects_plugin {
         mut commands: Commands,
         world_borders: Res<crate::WorldBorders>,
     ) {
-        let asteroid_count = 5;
+        let asteroid_count = 1;
         let asteroid_speed = 256.;
 
         for _ in 0..asteroid_count {
@@ -500,6 +501,40 @@ mod game_objects_plugin {
                 crate::movement_plugin::CollisionPhysics::default(),
             );
             commands.spawn(asteroid);
+        }
+    }
+
+    fn shoot_bullet(
+        asset_server: Res<AssetServer>,
+        mouse_world_coords: Res<crate::mouse_tracking_plugin::MouseWorldCoords>,
+        mut commands: Commands,
+        mut ev_reader: EventReader<crate::input_plugin::InputEvent>,
+        mut ev_writer: EventWriter<crate::sound_plugin::SoundEffectEvent>,
+        sprite_query: Query<&Transform, With<crate::input_plugin::InputResponsive>>,
+    ) {
+        let player_position = match sprite_query.get_single() {
+            Ok(transform) => transform.translation,
+            Err(_) => Vec3::splat(0.),
+        };
+
+        let mouse_vector = (mouse_world_coords.0.extend(0.) - player_position).normalize_or_zero();
+        let bullet_size = 2.;
+        for ev in ev_reader.read() {
+            let bullet = (
+                SpriteBundle {
+                    transform: Transform::from_translation(player_position + mouse_vector * 32.).with_scale(Vec2::splat(bullet_size).extend(0.)),
+                    texture: asset_server.load("textures/Bullet.png"),
+                    ..default()
+                },
+                crate::movement_plugin::TranslationalPhysics {
+                    velocity: mouse_vector.truncate() * 512.,
+                    ..default()
+                },
+            );
+            if let crate::input_plugin::InputEvent::PrimaryAction = ev {
+                commands.spawn(bullet);
+                ev_writer.send(crate::sound_plugin::SoundEffectEvent::ShootBulletSound);
+            }
         }
     }
 
@@ -538,6 +573,7 @@ mod sound_plugin {
     #[derive(Event)]
     pub enum SoundEffectEvent {
         CollisionSound,
+        ShootBulletSound,
     }
 
     fn play_sound_effect(
@@ -548,6 +584,7 @@ mod sound_plugin {
         for event in event_reader.read() {
             let audio_handle: Handle<AudioSource> = match event {
                 SoundEffectEvent::CollisionSound => asset_server.load("soundfx/RockImpact3.mp3"),
+                SoundEffectEvent::ShootBulletSound => asset_server.load("soundfx/BulletWhoosh.mp3")
             };
             commands.spawn(
             AudioBundle {
