@@ -38,7 +38,7 @@ fn main() {
             .set( ImagePlugin::default_nearest(),
             )
     );
-    app.add_plugins((movement_plugin::MovementPlugin, input_plugin::InputPlugin, mouse_tracking_plugin::MouseTrackingPlugin, game_objects_plugin::GameObjectsPlugin));
+    app.add_plugins((movement_plugin::MovementPlugin, input_plugin::InputPlugin, mouse_tracking_plugin::MouseTrackingPlugin, game_objects_plugin::GameObjectsPlugin, sound_plugin::SoundPlugin));
     app.add_systems(Update, (bevy::window::close_on_esc, move_player));
     app.add_systems(Startup, setup);
     app.init_resource::<WorldBorders>();
@@ -310,6 +310,7 @@ mod movement_plugin {
     fn collide(
         mut sprite_query: Query<(&mut TranslationalPhysics, &mut Transform), With<CollisionPhysics>>,
         mut event_reader: EventReader<CollisionEvent>,
+        mut event_writer: EventWriter<crate::sound_plugin::SoundEffectEvent>,
     ) {
         for collision_event in event_reader.read() {
             if let Ok(mut query) = sprite_query.get_many_mut([collision_event.entity_1, collision_event.entity_2]) {
@@ -317,6 +318,7 @@ mod movement_plugin {
                 let velocity_b = query[1].0.velocity;
                 query[0].0.velocity = velocity_b;
                 query[1].0.velocity = velocity_a;
+                event_writer.send(crate::sound_plugin::SoundEffectEvent::CollisionSound);
             }
         }
     }
@@ -518,5 +520,41 @@ mod game_objects_plugin {
             y,
             0.,
         )
+    }
+}
+
+mod sound_plugin {
+    use bevy::prelude::*;
+
+    pub struct SoundPlugin;
+
+    impl Plugin for SoundPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_event::<SoundEffectEvent>();
+            app.add_systems(Update, play_sound_effect);
+        }
+    }
+
+    #[derive(Event)]
+    pub enum SoundEffectEvent {
+        CollisionSound,
+    }
+
+    fn play_sound_effect(
+        asset_server: Res<AssetServer>,
+        mut commands: Commands,
+        mut event_reader: EventReader<SoundEffectEvent>,
+    ) {
+        for event in event_reader.read() {
+            let audio_handle: Handle<AudioSource> = match event {
+                SoundEffectEvent::CollisionSound => asset_server.load("soundfx/RockImpact3.mp3"),
+            };
+            commands.spawn(
+            AudioBundle {
+                source: audio_handle,
+                ..default()
+            },
+            );
+        }
     }
 }
