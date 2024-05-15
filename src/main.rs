@@ -477,7 +477,7 @@ mod game_objects_plugin {
         mut commands: Commands,
         world_borders: Res<crate::WorldBorders>,
     ) {
-        let asteroid_count = 1;
+        let asteroid_count = 5;
         let asteroid_speed = 256.;
 
         for _ in 0..asteroid_count {
