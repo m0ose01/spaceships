@@ -308,7 +308,7 @@ mod movement_plugin {
     }
 
     fn collide(
-        mut sprite_query: Query<(&mut TranslationalPhysics, &mut Transform), With<CollisionPhysics>>,
+        mut sprite_query: Query<(&mut TranslationalPhysics, &CollisionPhysics)>,
         mut event_reader: EventReader<CollisionEvent>,
         mut event_writer: EventWriter<crate::sound_plugin::SoundEffectEvent>,
     ) {
@@ -316,8 +316,13 @@ mod movement_plugin {
             if let Ok(mut query) = sprite_query.get_many_mut([collision_event.entity_1, collision_event.entity_2]) {
                 let velocity_a = query[0].0.velocity;
                 let velocity_b = query[1].0.velocity;
-                query[0].0.velocity = velocity_b;
-                query[1].0.velocity = velocity_a;
+                let hitbox_a = query[0].1.hitbox;
+                let hitbox_b = query[1].1.hitbox;
+                let vector_between = hitbox_a.center - hitbox_b.center;
+                let rebound = 1.5;
+                let energy_loss = 0.5;
+                query[0].0.velocity = velocity_b * energy_loss + vector_between * rebound;
+                query[1].0.velocity = velocity_a * energy_loss - vector_between * rebound;
                 event_writer.send(crate::sound_plugin::SoundEffectEvent::CollisionSound);
             }
         }
