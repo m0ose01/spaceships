@@ -94,17 +94,17 @@ mod movement_plugin {
             app.add_event::<CollisionEvent>();
             app.add_systems(FixedUpdate,
                 (
-                accelerate_sprite_rotation,
-                rotate_to_mouse,
-                rotate_sprite,
-                wrap_sprite,
-                calculate_hitbox,
-                check_collisions,
-                collide,
-                accelerate_sprite,
-                limit_max_speed,
-                translate_sprite,
-                collide_damage,
+                    accelerate_sprite_rotation,
+                    rotate_to_mouse,
+                    rotate_sprite,
+                    wrap_sprite,
+                    calculate_hitbox,
+                    check_collisions,
+                    collide,
+                    accelerate_sprite,
+                    limit_max_speed,
+                    translate_sprite,
+                    collide_damage,
                 ).chain()
             );
         }
@@ -687,10 +687,10 @@ mod sound_plugin {
                 SoundEffectEvent::ShootBulletSound => asset_server.load("soundfx/BulletWhoosh.mp3")
             };
             commands.spawn(
-            AudioBundle {
-                source: audio_handle,
-                ..default()
-            },
+                AudioBundle {
+                    source: audio_handle,
+                    ..default()
+                },
             );
         }
     }
