@@ -104,6 +104,7 @@ mod movement_plugin {
                 accelerate_sprite,
                 limit_max_speed,
                 translate_sprite,
+                collide_damage,
                 ).chain()
             );
         }
@@ -327,6 +328,20 @@ mod movement_plugin {
             }
         }
     }
+
+    fn collide_damage(
+        sprite_query: Query<Entity>,
+        mut ev_writer: EventWriter<crate::game_objects_plugin::DamageEvent>,
+        mut ev_reader: EventReader<CollisionEvent>,
+    ) {
+        let damage = 20;
+        for ev in ev_reader.read() {
+            if sprite_query.get_many([ev.entity_1, ev.entity_2]).is_ok() {
+                ev_writer.send(crate::game_objects_plugin::DamageEvent::new(damage, ev.entity_1));
+                ev_writer.send(crate::game_objects_plugin::DamageEvent::new(damage, ev.entity_2));
+            }
+        }
+    }
 }
 
 mod input_plugin {
@@ -448,7 +463,12 @@ mod game_objects_plugin {
         fn build(&self, app: &mut App) {
             app.add_systems(Startup, spawn_player);
             app.add_systems(Startup, spawn_asteroids);
-            app.add_systems(Update, shoot_bullet);
+            app.add_systems(Update, (
+                shoot_bullet,
+                deal_damage,
+                kill,
+            ));
+            app.add_event::<DamageEvent>();
         }
     }
 
@@ -458,6 +478,7 @@ mod game_objects_plugin {
     ) {
 
         let player = (
+            Health::new(100, 100),
             crate::movement_plugin::TranslationalPhysics::default(),
             crate::movement_plugin::RotateToMouse,
             crate::movement_plugin::MaxSpeed::new(crate::PLAYER_MAX_SPEED),
@@ -487,6 +508,7 @@ mod game_objects_plugin {
 
         for _ in 0..asteroid_count {
             let asteroid = (
+                Health::new(50, 50),
                 crate::movement_plugin::TranslationalPhysics {
                     velocity: random_vector(asteroid_speed),
                     ..default()
@@ -539,6 +561,79 @@ mod game_objects_plugin {
             if let crate::input_plugin::InputEvent::PrimaryAction = ev {
                 commands.spawn(bullet);
                 ev_writer.send(crate::sound_plugin::SoundEffectEvent::ShootBulletSound);
+            }
+        }
+    }
+
+    #[derive(Component)]
+    pub struct Health {
+        current: u32,
+        max: u32,
+    }
+
+    impl Health {
+        pub fn new(current: u32, max: u32) -> Self {
+            Self {
+                current,
+                max,
+            }
+        }
+
+        pub fn subtract(&mut self, amount: u32) -> u32 {
+            let new_health = self.current as i32 - amount as i32;
+            if new_health < 0 {
+                self.current = 0;
+            } else {
+                self.current = new_health as u32;
+            }
+            self.current
+        }
+
+        pub fn add(&mut self, amount: u32) -> u32 {
+            let new_health = self.current + amount;
+            if new_health > self.max {
+                self.current = self.max;
+            } else {
+                self.current = new_health;
+            }
+            self.current
+        }
+    }
+
+    #[derive(Event)]
+    pub struct DamageEvent {
+        damage: u32,
+        entity: Entity,
+    }
+
+    impl DamageEvent {
+        pub fn new(damage: u32, entity: Entity) -> Self {
+            Self {
+                damage,
+                entity,
+            }
+        }
+
+    }
+
+    fn deal_damage(
+        mut ev_reader: EventReader<DamageEvent>,
+        mut sprite_query: Query<&mut Health>,
+    ) {
+        for ev in ev_reader.read() {
+            if let Ok(mut health) = sprite_query.get_mut(ev.entity) {
+                println!("{}", health.subtract(ev.damage));
+            }
+        }
+    }
+
+    fn kill (
+        sprite_query: Query<(Entity, &Health)>,
+        mut commands: Commands,
+    ) {
+        for (entity, health) in &sprite_query {
+            if health.current == 0 {
+                commands.entity(entity).despawn();
             }
         }
     }
