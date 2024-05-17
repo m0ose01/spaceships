@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = {version = "0.13", features = ["dynamic_linking", "mp3"]}
+bevy_xpbd_2d = "0.4"
 rand = "0.8"
 
 [profile.dev]
