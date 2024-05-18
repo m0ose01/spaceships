@@ -117,10 +117,10 @@ fn wrap_sprite(
         );
 
         if transform.translation.x.abs() > limits.x {
-            transform.translation.x *= -1.;
+            transform.translation.x = limits.x * -transform.translation.x.signum();
         }
         if transform.translation.y.abs() > limits.y {
-            transform.translation.y *= -1.;
+            transform.translation.y = limits.y * -transform.translation.y.signum();
         }
     }
 }
