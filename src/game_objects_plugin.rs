@@ -23,7 +23,7 @@ fn spawn_player (
 ) {
 
     let player = (
-        Health::new(100, 100),
+        Health::new(1000, 1000),
         AutoCollider::Circle,
         RigidBody::Kinematic,
         crate::movement_plugin::RotateToMouse,
@@ -55,15 +55,16 @@ fn spawn_asteroids(
     world_borders: Res<crate::WorldBorders>,
 ) {
     let asteroid_count = 5;
-    let asteroid_speed = 256.;
+    let asteroid_speed = 128.;
     let asteroid_restitution = 0.8;
 
     for _ in 0..asteroid_count {
         let asteroid = (
             AutoCollider::Circle,
             RigidBody::Dynamic,
-            Health::new(50, 50),
+            Health::new(500, 500),
             LinearVelocity(random_vector(asteroid_speed)),
+            crate::movement_plugin::MaxSpeed::new(asteroid_speed),
             Restitution::new(asteroid_restitution),
             SpriteBundle {
                 texture: asset_server.load("textures/Asteroid2.png"),
@@ -102,6 +103,7 @@ fn shoot_bullet(
                 ..default()
             },
             RigidBody::Kinematic,
+            AutoCollider::Circle,
             LinearVelocity(mouse_vector.truncate() * 512.)
         );
         if let crate::input_plugin::InputEvent::PrimaryAction = ev {
