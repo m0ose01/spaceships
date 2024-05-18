@@ -1,7 +1,5 @@
 use bevy::{
     prelude::*,
-    math::bounding,
-    math::bounding::IntersectsVolume,
 };
 
 use bevy_xpbd_2d::prelude::*;
@@ -12,13 +10,15 @@ pub struct MovementPlugin;
 
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(PostStartup, (
+            calculate_hitbox,
+        ));
         app.add_systems(FixedUpdate,
             (
                 accelerate_sprite_rotation,
                 rotate_to_mouse,
                 rotate_sprite,
                 wrap_sprite,
-                calculate_hitbox,
                 collide_sound,
                 limit_max_speed,
                 collide_damage,
@@ -164,27 +164,11 @@ fn accelerate_sprite_rotation(
     }  
 }
 
-#[derive(Component)]
-pub struct CollisionPhysics {
-    hitbox: bounding::BoundingCircle,
-}
-
-impl Default for CollisionPhysics {
-    fn default() -> Self {
-        CollisionPhysics {
-            hitbox: bounding::BoundingCircle::new(
-                Vec2::splat(0.),
-                0.,
-            ),
-        }
-    }
-}
-
 fn calculate_hitbox(
     assets: Res<Assets<Image>>,
-    mut sprite_query: Query<(&mut CollisionPhysics, &Transform, &Handle<Image>)>,
+    mut sprite_query: Query<(&mut Collider, &Handle<Image>)>,
 ) {
-    for (mut collision_physics, transform, sprite_handle) in &mut sprite_query {
+    for (mut collider, sprite_handle) in &mut sprite_query {
         let size = match assets.get(sprite_handle) {
             Some(vec) => vec.size_f32(),
             None => Vec2::splat(0.),
@@ -193,15 +177,14 @@ fn calculate_hitbox(
         let hitbox_shrinking_factor = 0.9;
 
         let size_scaled = Vec2::new (
-            size.x * transform.scale.x * hitbox_shrinking_factor,
-            size.y * transform.scale.y * hitbox_shrinking_factor,
+            size.x * hitbox_shrinking_factor,
+            size.y * hitbox_shrinking_factor,
         );
 
-        let bounding_circle = bounding::BoundingCircle::new(
-            transform.translation.truncate(),
+        let bounding_circle = Collider::circle(
             (size_scaled.x + size_scaled.y) / 4.,
         );
-        collision_physics.hitbox = bounding_circle;
+        *collider = bounding_circle;
     }
 }
 
