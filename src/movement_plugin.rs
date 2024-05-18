@@ -10,14 +10,10 @@ pub struct MovementPlugin;
 
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, (
-            calculate_hitbox,
-        ));
         app.add_systems(FixedUpdate,
             (
-                accelerate_sprite_rotation,
                 rotate_to_mouse,
-                rotate_sprite,
+                // calculate_hitbox,
                 wrap_sprite,
                 collide_sound,
                 limit_max_speed,
@@ -27,42 +23,6 @@ impl Plugin for MovementPlugin {
         app.insert_resource(Gravity(Vec2::ZERO));
     }
 }
-
-// #[derive(Component)]
-// pub struct TranslationalPhysics {
-//     pub velocity: Vec2,
-//     pub acceleration: Vec2,
-// }
-//
-// impl Default for TranslationalPhysics {
-//     fn default() -> Self {
-//         Self {
-//             velocity: Vec2::splat(0.),
-//             acceleration: Vec2::splat(0.),
-//         }
-//     }
-// }
-//
-// fn accelerate_sprite(
-//     time: Res<Time>,
-//     mut sprite_query: Query<&mut TranslationalPhysics>,
-// ) {
-//     for mut physics in &mut sprite_query {
-//         physics.velocity = physics.velocity + physics.acceleration * time.delta_seconds();
-//         physics.acceleration = Vec2::splat(0.);
-//     }
-// }
-//
-// fn translate_sprite(
-//     time: Res<Time>,
-//     mut sprite_query: Query<(&mut Transform, &TranslationalPhysics)>,
-// ) {
-//     let deltat_s = time.delta_seconds();
-//     for (mut transform, physics) in &mut sprite_query {
-//         transform.translation.x += physics.velocity.x * deltat_s;
-//         transform.translation.y += physics.velocity.y * deltat_s;
-//     }
-// }
 
 #[derive(Component)]
 pub struct MaxSpeed {
@@ -140,30 +100,6 @@ fn wrap_sprite(
     }
 }
 
-#[derive(Component, Default)]
-pub struct RotationalPhysics {
-    pub angular_velocity: f32,
-    pub angular_acceleration: f32,
-}
-
-fn rotate_sprite(
-    time: Res<Time>,
-    mut sprite_query: Query<(&mut Transform, &RotationalPhysics)>,
-) {
-    for (mut transform, rotational_physics) in &mut sprite_query {
-        transform.rotate_z(rotational_physics.angular_velocity * time.delta_seconds());
-    }
-}
-
-fn accelerate_sprite_rotation(
-    time: Res<Time>,
-    mut sprite_query: Query<&mut RotationalPhysics>,
-) {
-    for mut rotational_physics in &mut sprite_query {
-        rotational_physics.angular_velocity += rotational_physics.angular_acceleration * time.delta_seconds();
-    }  
-}
-
 fn calculate_hitbox(
     assets: Res<Assets<Image>>,
     mut sprite_query: Query<(&mut Collider, &Handle<Image>)>,
@@ -188,26 +124,11 @@ fn calculate_hitbox(
     }
 }
 
-// fn check_collisions(
-//     mut event_writer: EventWriter<CollisionEvent>,
-//     sprite_query: Query<(&CollisionPhysics, Entity)>,
-// ) {
-//     let mut combinations = sprite_query.iter_combinations();
-//     while let Some([(collision_physics_1, entity_1), (collision_physics_2, entity_2)]) = combinations.fetch_next() {
-//         if collision_physics_1.hitbox.intersects(&collision_physics_2.hitbox) {
-//             event_writer.send(CollisionEvent {
-//                 entity1: entity_1,
-//                 entity2: entity_2,
-//             });
-//         }
-//     }
-// }
-
 fn collide_sound(
     mut event_reader: EventReader<Collision>,
     mut event_writer: EventWriter<crate::sound_plugin::SoundEffectEvent>,
 ) {
-    for Collision(contacts) in event_reader.read() {
+    for _ in event_reader.read() {
         event_writer.send(crate::sound_plugin::SoundEffectEvent::CollisionSound);
     }
 }

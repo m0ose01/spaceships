@@ -65,10 +65,7 @@ fn spawn_asteroids(
                 ..default()
             },
             crate::movement_plugin::Wrap,
-            crate::movement_plugin::RotationalPhysics {
-                angular_velocity: std::f32::consts::PI / 2.,
-                ..default()
-            },
+            AngularVelocity(std::f32::consts::PI / 2.),
         );
         commands.spawn(asteroid);
     }
