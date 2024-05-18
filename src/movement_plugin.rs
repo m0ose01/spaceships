@@ -4,6 +4,8 @@ use bevy::{
 
 use bevy_xpbd_2d::prelude::*;
 
+use crate::game_objects_plugin::AutoCollider;
+
 use crate::mouse_tracking_plugin::MouseWorldCoords;
 
 pub struct MovementPlugin;
@@ -13,7 +15,7 @@ impl Plugin for MovementPlugin {
         app.add_systems(FixedUpdate,
             (
                 rotate_to_mouse,
-                // calculate_hitbox,
+                calculate_hitbox,
                 wrap_sprite,
                 collide_sound,
                 limit_max_speed,
@@ -102,25 +104,36 @@ fn wrap_sprite(
 
 fn calculate_hitbox(
     assets: Res<Assets<Image>>,
-    mut sprite_query: Query<(&mut Collider, &Handle<Image>)>,
+    sprite_query: Query<(Entity, &Handle<Image>, &AutoCollider)>,
+    mut commands: Commands,
 ) {
-    for (mut collider, sprite_handle) in &mut sprite_query {
+    for (entity, sprite_handle, autocollider) in &sprite_query {
         let size = match assets.get(sprite_handle) {
             Some(vec) => vec.size_f32(),
             None => Vec2::splat(0.),
         };
 
         let hitbox_shrinking_factor = 0.9;
+        let border_radius = 4.;
 
         let size_scaled = Vec2::new (
             size.x * hitbox_shrinking_factor,
             size.y * hitbox_shrinking_factor,
         );
 
-        let bounding_circle = Collider::circle(
-            (size_scaled.x + size_scaled.y) / 4.,
-        );
-        *collider = bounding_circle;
+        let collider = match autocollider {
+            AutoCollider::Circle => Collider::circle(
+                (size_scaled.x + size_scaled.y) / 4.,
+            ),
+            AutoCollider::RoundedRectangle => Collider::round_rectangle(
+               size_scaled.x, size_scaled.y, border_radius,
+            ),
+        };
+
+        if let Some(mut entity_commands) = commands.get_entity(entity) {
+            entity_commands.insert(collider);
+            entity_commands.remove::<AutoCollider>();
+        }
     }
 }
 

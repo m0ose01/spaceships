@@ -24,7 +24,7 @@ fn spawn_player (
 
     let player = (
         Health::new(100, 100),
-        Collider::circle(8.),
+        AutoCollider::Circle,
         RigidBody::Kinematic,
         crate::movement_plugin::RotateToMouse,
         crate::movement_plugin::MaxSpeed::new(crate::PLAYER_MAX_SPEED),
@@ -43,6 +43,12 @@ fn spawn_player (
 
 }
 
+#[derive(Component)]
+pub enum AutoCollider {
+    Circle,
+    RoundedRectangle,
+}
+
 fn spawn_asteroids(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
@@ -53,7 +59,7 @@ fn spawn_asteroids(
 
     for _ in 0..asteroid_count {
         let asteroid = (
-            Collider::circle(8.),
+            AutoCollider::Circle,
             RigidBody::Dynamic,
             Health::new(50, 50),
             LinearVelocity(random_vector(asteroid_speed)),
