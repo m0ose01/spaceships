@@ -47,7 +47,7 @@ fn main() {
     );
     app.add_plugins((movement_plugin::MovementPlugin, input_plugin::InputPlugin, mouse_tracking_plugin::MouseTrackingPlugin, game_objects_plugin::GameObjectsPlugin, sound_plugin::SoundPlugin));
     app.add_plugins(PhysicsPlugins::default());
-    app.add_plugins(PhysicsDebugPlugin::default());
+    // app.add_plugins(PhysicsDebugPlugin::default());
     app.add_systems(Update, bevy::window::close_on_esc);
     app.add_systems(Startup, setup);
     app.init_resource::<WorldBorders>();

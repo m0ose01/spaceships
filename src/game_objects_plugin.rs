@@ -56,6 +56,7 @@ fn spawn_asteroids(
 ) {
     let asteroid_count = 5;
     let asteroid_speed = 256.;
+    let asteroid_restitution = 0.8;
 
     for _ in 0..asteroid_count {
         let asteroid = (
@@ -63,6 +64,7 @@ fn spawn_asteroids(
             RigidBody::Dynamic,
             Health::new(50, 50),
             LinearVelocity(random_vector(asteroid_speed)),
+            Restitution::new(asteroid_restitution),
             SpriteBundle {
                 texture: asset_server.load("textures/Asteroid2.png"),
                 transform: Transform::from_translation(
