@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use rand::Rng;
+use bevy_xpbd_2d::prelude::*;
 
 pub struct GameObjectsPlugin;
 
@@ -23,14 +24,14 @@ fn spawn_player (
 
     let player = (
         Health::new(100, 100),
-        crate::movement_plugin::TranslationalPhysics::default(),
+        AutoCollider::Circle,
+        RigidBody::Kinematic,
         crate::movement_plugin::RotateToMouse,
         crate::movement_plugin::MaxSpeed::new(crate::PLAYER_MAX_SPEED),
         crate::movement_plugin::Wrap,
-        crate::movement_plugin::CollisionPhysics::default(),
         SpriteBundle {
             texture: asset_server.load("textures/Spaceship3.png"),
-            transform: Transform::default().with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(0.)),
+            transform: Transform::default().with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(1.)),
             ..default()
         },
         crate::input_plugin::InputResponsive,
@@ -42,6 +43,12 @@ fn spawn_player (
 
 }
 
+#[derive(Component)]
+pub enum AutoCollider {
+    Circle,
+    RoundedRectangle,
+}
+
 fn spawn_asteroids(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
@@ -49,27 +56,24 @@ fn spawn_asteroids(
 ) {
     let asteroid_count = 5;
     let asteroid_speed = 256.;
+    let asteroid_restitution = 0.8;
 
     for _ in 0..asteroid_count {
         let asteroid = (
+            AutoCollider::Circle,
+            RigidBody::Dynamic,
             Health::new(50, 50),
-            crate::movement_plugin::TranslationalPhysics {
-                velocity: random_vector(asteroid_speed),
-                ..default()
-            },
+            LinearVelocity(random_vector(asteroid_speed)),
+            Restitution::new(asteroid_restitution),
             SpriteBundle {
                 texture: asset_server.load("textures/Asteroid2.png"),
                 transform: Transform::from_translation(
                     random_point(world_borders.width, world_borders.height),
-                ).with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(0.)),
+                ).with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(1.)),
                 ..default()
             },
             crate::movement_plugin::Wrap,
-            crate::movement_plugin::RotationalPhysics {
-                angular_velocity: std::f32::consts::PI / 2.,
-                ..default()
-            },
-            crate::movement_plugin::CollisionPhysics::default(),
+            AngularVelocity(std::f32::consts::PI / 2.),
         );
         commands.spawn(asteroid);
     }
@@ -93,14 +97,12 @@ fn shoot_bullet(
     for ev in ev_reader.read() {
         let bullet = (
             SpriteBundle {
-                transform: Transform::from_translation(player_position + mouse_vector * 32.).with_scale(Vec2::splat(bullet_size).extend(0.)),
+                transform: Transform::from_translation(player_position + mouse_vector * 32.).with_scale(Vec2::splat(bullet_size).extend(1.)),
                 texture: asset_server.load("textures/Bullet.png"),
                 ..default()
             },
-            crate::movement_plugin::TranslationalPhysics {
-                velocity: mouse_vector.truncate() * 512.,
-                ..default()
-            },
+            RigidBody::Kinematic,
+            LinearVelocity(mouse_vector.truncate() * 512.)
         );
         if let crate::input_plugin::InputEvent::PrimaryAction = ev {
             commands.spawn(bullet);
