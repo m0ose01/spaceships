@@ -4,25 +4,48 @@ use bevy::{
 
 use bevy_xpbd_2d::prelude::*;
 
-use crate::game_objects_plugin::AutoCollider;
-
-use crate::mouse_tracking_plugin::MouseWorldCoords;
+use crate::{
+    game_objects_plugin::AutoCollider,
+    mouse_tracking_plugin::MouseWorldCoords,
+    PLAYER_ACCELERATION,
+    input_plugin::{InputEvent, InputResponsive},
+};
 
 pub struct MovementPlugin;
 
 impl Plugin for MovementPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate,
+        app.add_systems(Update,
             (
                 rotate_to_mouse,
                 calculate_hitbox,
                 wrap_sprite,
                 collide_sound,
-                limit_max_speed,
                 collide_damage,
-            ).chain()
+            )
         );
+        app.add_systems(Update, (
+            move_player,
+            limit_max_speed,
+        ).chain());
         app.insert_resource(Gravity(Vec2::ZERO));
+    }
+}
+
+fn move_player(
+    mut sprite_query: Query<&mut LinearVelocity, With<InputResponsive>>,
+    mut ev_reader: EventReader<InputEvent>,
+) {
+    for mut velocity in &mut sprite_query {
+        for ev in ev_reader.read() {
+            velocity.0 += match ev {
+                InputEvent::Up => Vec2::new(0., 1.),
+                InputEvent::Down => Vec2::new(0., -1.),
+                InputEvent::Left => Vec2::new(-1., 0.),
+                InputEvent::Right => Vec2::new(1., 0.),
+                _ => continue,
+            }.normalize_or_zero() * PLAYER_ACCELERATION;
+        }
     }
 }
 

@@ -48,7 +48,7 @@ fn main() {
     app.add_plugins((movement_plugin::MovementPlugin, input_plugin::InputPlugin, mouse_tracking_plugin::MouseTrackingPlugin, game_objects_plugin::GameObjectsPlugin, sound_plugin::SoundPlugin));
     app.add_plugins(PhysicsPlugins::default());
     app.add_plugins(PhysicsDebugPlugin::default());
-    app.add_systems(Update, (bevy::window::close_on_esc, move_player));
+    app.add_systems(Update, bevy::window::close_on_esc);
     app.add_systems(Startup, setup);
     app.init_resource::<WorldBorders>();
     app.run();
@@ -65,21 +65,4 @@ fn setup (
     };
     camera_bundle.camera.clear_color = ClearColorConfig::Custom(Color::rgb(32. / 255., 32. / 255., 64. / 255.));
     commands.spawn(camera_bundle);
-}
-
-fn move_player(
-    mut sprite_query: Query<&mut LinearVelocity, With<input_plugin::InputResponsive>>,
-    mut ev_reader: EventReader<input_plugin::InputEvent>,
-) {
-    for mut velocity in &mut sprite_query {
-        for ev in ev_reader.read() {
-            velocity.0 += match ev {
-                input_plugin::InputEvent::Up => Vec2::new(0., 1.),
-                input_plugin::InputEvent::Down => Vec2::new(0., -1.),
-                input_plugin::InputEvent::Left => Vec2::new(-1., 0.),
-                input_plugin::InputEvent::Right => Vec2::new(1., 0.),
-                _ => continue,
-            }.normalize_or_zero() * PLAYER_ACCELERATION;
-        }
-    }
 }
