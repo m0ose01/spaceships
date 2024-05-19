@@ -7,7 +7,7 @@ mod sound_plugin;
 use bevy::prelude::*;
 use bevy_xpbd_2d::prelude::*;
 
-const WINDOW_SIZE: Vec2 = Vec2::new(800., 400.);
+const WINDOW_SIZE: Vec2 = Vec2::new(1920., 1080.);
 const PLAYER_ACCELERATION: f32 = 16.;
 const PLAYER_MAX_SPEED: f32 = 300.;
 

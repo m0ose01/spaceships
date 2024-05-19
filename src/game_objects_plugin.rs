@@ -68,8 +68,8 @@ fn spawn_asteroids(
     mut commands: Commands,
     world_borders: Res<crate::WorldBorders>,
 ) {
-    let asteroid_count = 5;
-    let asteroid_speed = 128.;
+    let asteroid_count = 12;
+    let asteroid_speed = 256.;
     let asteroid_restitution = 0.8;
 
     for _ in 0..asteroid_count {
