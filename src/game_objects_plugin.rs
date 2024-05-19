@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    sprite::MaterialMesh2dBundle,
+};
 use rand::Rng;
 use bevy_xpbd_2d::prelude::*;
 
@@ -14,6 +17,7 @@ impl Plugin for GameObjectsPlugin {
             shoot_bullet,
             deal_damage,
             kill,
+            draw_health_bar,
         ));
         app.add_systems(PostProcessCollisions, (
             ignore_collisions,
@@ -33,6 +37,7 @@ fn spawn_player (
     let player = (
         CollisionGroup(PLAYER_COLLISION_GROUP),
         Health::new(1000, 1000),
+        ShowHealthBar,
         AutoCollider::Circle,
         RigidBody::Kinematic,
         crate::movement_plugin::RotateToMouse,
@@ -72,6 +77,7 @@ fn spawn_asteroids(
             AutoCollider::Circle,
             RigidBody::Dynamic,
             Health::new(500, 500),
+            ShowHealthBar,
             LinearVelocity(random_vector(asteroid_speed)),
             crate::movement_plugin::MaxSpeed::new(asteroid_speed),
             Restitution::new(asteroid_restitution),
@@ -181,7 +187,7 @@ fn deal_damage(
 ) {
     for ev in ev_reader.read() {
         if let Ok(mut health) = sprite_query.get_mut(ev.entity) {
-            println!("{}", health.subtract(ev.damage));
+            health.subtract(ev.damage);
         }
     }
 }
@@ -192,7 +198,7 @@ fn kill (
 ) {
     for (entity, health) in &sprite_query {
         if health.current == 0 {
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
@@ -225,5 +231,41 @@ fn ignore_collisions(
         if collision_group_a == collision_group_b {
             collisions.remove_collision_pair(entity_a, entity_b);
         }
+    }
+}
+
+#[derive(Component)]
+pub struct ShowHealthBar;
+
+fn draw_health_bar(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    sprite_query: Query<(Entity, &Health), (With<ShowHealthBar>, Changed<Health>)>,
+) {
+    let health_bar_size = Vec2::new(8., 1.);
+    let health_bar_vertical_offset = -4.;
+    for (entity, health) in &sprite_query {
+        if health.current == 0 {
+            return;
+        }
+        let current_health_bar_width = (health.current as f32 / health.max as f32) * health_bar_size.x;
+        let current_health_bar_size = Vec2::new(current_health_bar_width, health_bar_size.y);
+        let current_health_bar_x_offset = -1. * (health_bar_size.x - current_health_bar_width) / 2.;
+        let red_bar = MaterialMesh2dBundle {
+            mesh: meshes.add(Rectangle::from_size(health_bar_size)).into(),
+            transform: Transform::from_xyz(0., health_bar_vertical_offset, 1.),
+            material: materials.add(Color::MAROON),
+            ..default()
+        };
+        let green_bar = MaterialMesh2dBundle {
+            mesh: meshes.add(Rectangle::from_size(current_health_bar_size)).into(),
+            transform: Transform::from_xyz(current_health_bar_x_offset, health_bar_vertical_offset, 2.),
+            material: materials.add(Color::DARK_GREEN),
+            ..default()
+        };
+        commands.get_entity(entity).unwrap().clear_children();
+        commands.spawn(green_bar).set_parent(entity);
+        commands.spawn(red_bar).set_parent(entity);
     }
 }
