@@ -4,6 +4,8 @@ use bevy_xpbd_2d::prelude::*;
 
 pub struct GameObjectsPlugin;
 
+const PLAYER_COLLISION_GROUP: u8 = 0;
+
 impl Plugin for GameObjectsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player);
@@ -13,9 +15,15 @@ impl Plugin for GameObjectsPlugin {
             deal_damage,
             kill,
         ));
+        app.add_systems(PostProcessCollisions, (
+            ignore_collisions,
+        ));
         app.add_event::<DamageEvent>();
     }
 }
+
+#[derive(Component, PartialEq)]
+pub struct CollisionGroup(u8);
 
 fn spawn_player (
     asset_server: Res<AssetServer>,
@@ -23,6 +31,7 @@ fn spawn_player (
 ) {
 
     let player = (
+        CollisionGroup(PLAYER_COLLISION_GROUP),
         Health::new(1000, 1000),
         AutoCollider::Circle,
         RigidBody::Kinematic,
@@ -97,6 +106,8 @@ fn shoot_bullet(
     let bullet_size = 2.;
     for ev in ev_reader.read() {
         let bullet = (
+            CollisionGroup(PLAYER_COLLISION_GROUP),
+            Health::new(1, 1),
             SpriteBundle {
                 transform: Transform::from_translation(player_position + mouse_vector * 32.).with_scale(Vec2::splat(bullet_size).extend(1.)),
                 texture: asset_server.load("textures/Bullet.png"),
@@ -203,4 +214,16 @@ fn random_point(width: u32, height: u32) -> Vec3 {
         y,
         0.,
     )
+}
+
+fn ignore_collisions(
+    mut collisions: ResMut<Collisions>,
+    group_query: Query<(Entity, &CollisionGroup)>,
+) {
+    let mut collision_pairs = group_query.iter_combinations();
+    while let Some([(entity_a, collision_group_a), (entity_b, collision_group_b)]) = collision_pairs.fetch_next() {
+        if collision_group_a == collision_group_b {
+            collisions.remove_collision_pair(entity_a, entity_b);
+        }
+    }
 }
