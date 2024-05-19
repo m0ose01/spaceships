@@ -105,7 +105,7 @@ fn shoot_bullet(
 ) {
     let player_position = match sprite_query.get_single() {
         Ok(transform) => transform.translation,
-        Err(_) => Vec3::splat(0.),
+        Err(_) => return,
     };
 
     let mouse_vector = (mouse_world_coords.0.extend(0.) - player_position).normalize_or_zero();
@@ -264,8 +264,10 @@ fn draw_health_bar(
             material: materials.add(Color::DARK_GREEN),
             ..default()
         };
-        commands.get_entity(entity).unwrap().clear_children();
-        commands.spawn(green_bar).set_parent(entity);
-        commands.spawn(red_bar).set_parent(entity);
+        if let Some(mut parent) = commands.get_entity(entity) {
+            parent.despawn_descendants();
+            commands.spawn(green_bar).set_parent(entity);
+            commands.spawn(red_bar).set_parent(entity);
+        }
     }
 }
