@@ -22,6 +22,7 @@ impl Plugin for MovementPlugin {
                 wrap_sprite,
                 collide_sound,
                 collide_damage,
+                move_random,
             )
         );
         app.add_systems(Update, (
@@ -180,5 +181,33 @@ fn collide_damage(
             ev_writer.send(crate::game_objects_plugin::DamageEvent::new(damage, contacts.entity1));
             ev_writer.send(crate::game_objects_plugin::DamageEvent::new(damage, contacts.entity2));
         }
+    }
+}
+
+#[derive(Component)]
+pub struct DirectionChangeTimer {
+    timer: Timer,
+}
+
+use bevy::utils::Duration;
+
+impl DirectionChangeTimer {
+    pub fn new(duration: u64) -> Self {
+        Self {
+            timer: Timer::new(Duration::from_secs(duration), TimerMode::Repeating)
+        }
+    }
+}
+
+fn move_random(
+    mut sprite_query: Query<(&mut LinearVelocity, &mut DirectionChangeTimer)>,
+    time: Res<Time>,
+) {
+    for (mut linear_velocity, mut direction_change_timer) in &mut sprite_query {
+        direction_change_timer.timer.tick(time.delta());
+        if !direction_change_timer.timer.just_finished() {
+            continue;
+        }
+        linear_velocity.0 = crate::game_objects_plugin::random_vector(linear_velocity.0.length());
     }
 }

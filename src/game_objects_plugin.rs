@@ -8,11 +8,13 @@ use bevy_xpbd_2d::prelude::*;
 pub struct GameObjectsPlugin;
 
 const PLAYER_COLLISION_GROUP: u8 = 0;
+const ENEMY_COLLISION_GROUP: u8 = 1;
 
 impl Plugin for GameObjectsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_player);
         app.add_systems(Startup, spawn_asteroids);
+        app.add_systems(Startup, spawn_enemy);
         app.add_systems(Update, (
             shoot_bullet,
             deal_damage,
@@ -130,6 +132,37 @@ fn shoot_bullet(
     }
 }
 
+use crate::movement_plugin::DirectionChangeTimer;
+
+fn spawn_enemy(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    world_borders: Res<crate::WorldBorders>,
+) {
+    let enemy_angular_velocity = std::f32::consts::PI / 2.;
+    let enemy_speed = 256.;
+    let enemy_count = 5;
+    for _ in 0..enemy_count {
+        let enemy = (
+            SpriteBundle {
+                texture: asset_server.load("textures/UFO2.png"),
+                transform: Transform::from_translation(random_point(world_borders.width, world_borders.height)).with_scale(Vec2::splat(crate::PLAYER_SIZE).extend(1.)),
+                ..default()
+            },
+            LinearVelocity(random_vector(enemy_speed)),
+            crate::movement_plugin::Wrap,
+            DirectionChangeTimer::new(2),
+            RigidBody::Kinematic,
+            CollisionGroup(ENEMY_COLLISION_GROUP),
+            AutoCollider::Circle,
+            AngularVelocity(enemy_angular_velocity),
+            Health::new(1000, 1000),
+            ShowHealthBar,
+        );
+        commands.spawn(enemy);
+    }
+}
+
 #[derive(Component)]
 pub struct Health {
     current: u32,
@@ -203,7 +236,7 @@ fn kill (
     }
 }
 
-fn random_vector(speed: f32) -> Vec2 {
+pub fn random_vector(speed: f32) -> Vec2 {
     let mut rng = rand::thread_rng();
 
     let rand1 = rng.gen::<f32>() - 0.5;
@@ -211,7 +244,7 @@ fn random_vector(speed: f32) -> Vec2 {
     return Vec2::new(rand1, rand2).normalize_or_zero() * speed;
 }
 
-fn random_point(width: u32, height: u32) -> Vec3 {
+pub fn random_point(width: u32, height: u32) -> Vec3 {
     let mut rng = rand::thread_rng();
     let x = rng.gen_range(-(width as i32 / 2)..(width as i32 / 2)) as f32;
     let y = rng.gen_range(-(height as i32 / 2)..(height as i32 / 2)) as f32;
